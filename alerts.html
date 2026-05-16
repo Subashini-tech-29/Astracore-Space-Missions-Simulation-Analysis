@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ASTRACORE — Alert Center</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="js/shell.js"></script>
+</head>
+<body>
+<div id="particles"></div>
+<div class="app-layout">
+  <div id="shell-container"></div>
+  <div class="main-content">
+    <div class="mobile-header">
+      <span style="font-family:'Space Mono',monospace;font-weight:700;color:var(--primary)">ASTRACORE</span>
+      <button class="btn btn-ghost" onclick="toggleSidebar()"><i data-lucide="menu" style="width:20px;height:20px"></i></button>
+    </div>
+    <div class="page-content">
+      <div class="page-inner space-y-6">
+        <div>
+          <h1 class="page-title">ALERT CENTER</h1>
+          <p class="page-subtitle" id="alertCount">7 ALERTS MATCHING FILTERS</p>
+        </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <select class="select" style="width:200px" id="sevFilter" onchange="renderAlerts()">
+            <option value="">All Severities</option>
+            <option value="critical">Critical</option>
+            <option value="warning">Warning</option>
+            <option value="safe">Safe</option>
+          </select>
+          <select class="select" style="width:200px" id="ackFilter" onchange="renderAlerts()">
+            <option value="">All Statuses</option>
+            <option value="false">Unacknowledged</option>
+            <option value="true">Acknowledged</option>
+          </select>
+        </div>
+        <div class="space-y-3" id="alertList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+initShell('shell-container');
+lucide.createIcons();
+
+const alerts = DEMO.alerts.map(a=>({...a}));
+
+function renderAlerts(){
+  const sev = document.getElementById('sevFilter').value;
+  const ack = document.getElementById('ackFilter').value;
+  let list = alerts.filter(a=>{
+    if(sev && a.severity!==sev) return false;
+    if(ack==='true' && !a.acknowledged) return false;
+    if(ack==='false' && a.acknowledged) return false;
+    return true;
+  });
+  document.getElementById('alertCount').textContent = list.length+' ALERTS MATCHING FILTERS';
+  if(list.length===0){
+    document.getElementById('alertList').innerHTML=`<div style="text-align:center;padding:60px 0"><i data-lucide="check-circle" style="width:48px;height:48px;color:var(--emerald);opacity:0.5;display:block;margin:0 auto 16px"></i><p class="mono" style="color:var(--muted)">ALL SYSTEMS NOMINAL — NO ALERTS</p></div>`;
+    lucide.createIcons(); return;
+  }
+  const iconMap={critical:'var(--red)',warning:'var(--yellow)',safe:'var(--emerald)'};
+  document.getElementById('alertList').innerHTML = list.map(a=>`
+    <div class="alert-row ${a.severity}" id="alert-${a.id}">
+      <i data-lucide="alert-triangle" class="alert-icon" style="color:${iconMap[a.severity]}"></i>
+      <div class="alert-info">
+        <div class="alert-type">
+          ${a.type.replace(/_/g,' ')}
+          ${severityBadge(a.severity)}
+          ${a.acknowledged?'<span class="badge badge-muted">ACK</span>':''}
+        </div>
+        <div class="alert-msg">${a.message}</div>
+        <div class="alert-time">${fmtTime(a.createdAt)} — ALERT #${String(a.id).padStart(4,'0')}</div>
+      </div>
+      ${!a.acknowledged?`<button class="btn btn-outline btn-sm" onclick="ack(${a.id})" style="flex-shrink:0"><i data-lucide="check-circle" style="width:12px;height:12px"></i>ACK</button>`:''}
+    </div>`).join('');
+  lucide.createIcons();
+}
+
+function ack(id){
+  const a=alerts.find(x=>x.id===id);
+  if(a){ a.acknowledged=true; renderAlerts(); showToast('Alert Acknowledged',`Alert #${String(id).padStart(4,'0')} marked as acknowledged.`); }
+}
+
+renderAlerts();
+</script>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ASTRACORE — Missions</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="js/shell.js"></script>
+</head>
+<body>
+<div id="particles"></div>
+<div class="app-layout">
+  <div id="shell-container"></div>
+  <div class="main-content">
+    <div class="mobile-header">
+      <span style="font-family:'Space Mono',monospace;font-weight:700;color:var(--primary)">ASTRACORE</span>
+      <button class="btn btn-ghost" onclick="toggleSidebar()"><i data-lucide="menu" style="width:20px;height:20px"></i></button>
+    </div>
+    <div class="page-content">
+      <div class="page-inner space-y-6">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+          <div>
+            <h1 class="page-title">MISSIONS</h1>
+            <p class="page-subtitle" id="missionCount">8 MISSIONS IN DATABASE</p>
+          </div>
+          <button class="btn btn-primary" onclick="showNewMissionModal()"><i data-lucide="plus" style="width:14px;height:14px"></i>NEW MISSION</button>
+        </div>
+
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <div class="input-icon-wrap" style="flex:1;min-width:200px">
+            <i data-lucide="search" class="icon"></i>
+            <input class="input" id="searchInput" placeholder="Search missions..." oninput="renderMissions()">
+          </div>
+          <select class="select" style="width:200px" id="statusFilter" onchange="renderMissions()">
+            <option value="">All Statuses</option>
+            <option value="planning">Planning</option>
+            <option value="active">Active</option>
+            <option value="completed">Completed</option>
+            <option value="failed">Failed</option>
+            <option value="aborted">Aborted</option>
+          </select>
+        </div>
+
+        <div class="grid grid-3" id="missionGrid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New Mission Modal -->
+<div id="modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;display:none;align-items:center;justify-content:center;padding:24px">
+  <div class="card p-6" style="width:100%;max-width:480px;border-color:rgba(0,128,255,0.2)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <span class="mono" style="font-size:0.9rem;font-weight:700;text-transform:uppercase">New Mission</span>
+      <button class="btn btn-ghost" onclick="closeModal()"><i data-lucide="x" style="width:16px;height:16px"></i></button>
+    </div>
+    <div class="space-y-4">
+      <div class="form-group"><label class="label">Mission Name</label><input class="input" id="nm_name" placeholder="e.g. APOLLO REDUX"></div>
+      <div class="form-group"><label class="label">Destination</label><input class="input" id="nm_dest" placeholder="e.g. Mars"></div>
+      <div class="form-group"><label class="label">Payload</label><input class="input" id="nm_payload" placeholder="e.g. Crew of 4"></div>
+      <div class="form-group"><label class="label">Launch Date</label><input class="input" id="nm_date" type="date"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+        <button class="btn btn-outline" onclick="closeModal()">CANCEL</button>
+        <button class="btn btn-primary" onclick="submitMission()"><i data-lucide="rocket" style="width:14px;height:14px"></i>LAUNCH MISSION</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+initShell('shell-container');
+lucide.createIcons();
+
+function renderMissions(){
+  const search=document.getElementById('searchInput').value.toLowerCase();
+  const status=document.getElementById('statusFilter').value;
+  let missions=DEMO.missions.filter(m=>{
+    if(status&&m.status!==status)return false;
+    if(search&&!m.name.toLowerCase().includes(search)&&!m.destination.toLowerCase().includes(search))return false;
+    return true;
+  });
+  document.getElementById('missionCount').textContent=missions.length+' MISSIONS IN DATABASE';
+  document.getElementById('missionGrid').innerHTML=missions.length===0
+    ?`<div style="grid-column:1/-1;text-align:center;padding:60px 0;color:var(--muted)"><i data-lucide="rocket" style="width:48px;height:48px;opacity:0.2;display:block;margin:0 auto 16px"></i><p class="mono">NO MISSIONS FOUND</p></div>`
+    :missions.map(m=>`
+    <div class="card" style="padding:20px;cursor:pointer;transition:border-color 0.2s" onmouseenter="this.style.borderColor='rgba(0,128,255,0.3)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.07)'" onclick="openMission(${m.id})">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:8px;min-width:0">
+          <i data-lucide="rocket" style="width:15px;height:15px;color:var(--primary);flex-shrink:0"></i>
+          <span class="mono" style="font-size:0.85rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.name}</span>
+        </div>${statusBadge(m.status)}
+      </div>
+      <div class="space-y-2">
+        ${[['DESTINATION',m.destination],['PAYLOAD',m.payload],['LAUNCH DATE',fmtDate(m.launchDate)],['SUCCESS PROB.',parseFloat(m.successProbability).toFixed(1)+'%']].map(([l,v])=>`
+        <div style="display:flex;justify-content:space-between;font-size:0.75rem;font-family:'Space Mono',monospace">
+          <span style="color:var(--muted)">${l}</span>
+          <span style="color:${l==='SUCCESS PROB.'?'var(--emerald)':'var(--fg)'}">${v}</span>
+        </div>`).join('')}
+      </div>
+    </div>`).join('');
+  lucide.createIcons();
+}
+
+function openMission(id){ window.location.href=`mission-detail.html?id=${id}`; }
+
+function showNewMissionModal(){
+  document.getElementById('modal').style.display='flex';
+  lucide.createIcons();
+}
+function closeModal(){ document.getElementById('modal').style.display='none'; }
+function submitMission(){
+  const name=document.getElementById('nm_name').value.trim();
+  const dest=document.getElementById('nm_dest').value.trim();
+  const payload=document.getElementById('nm_payload').value.trim();
+  const date=document.getElementById('nm_date').value;
+  if(!name||!dest){showToast('Error','Name and destination are required.','error');return;}
+  DEMO.missions.unshift({id:Date.now(),name:name.toUpperCase(),destination:dest,payload:payload||'TBD',launchDate:date||new Date().toISOString().split('T')[0],status:'planning',successProbability:'80.0'});
+  closeModal();renderMissions();
+  showToast('Mission Created',`${name.toUpperCase()} added to mission database.`);
+}
+renderMissions();
+</script>
+</body>
+</html>

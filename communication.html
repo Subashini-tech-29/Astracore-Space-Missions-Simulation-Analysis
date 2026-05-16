@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ASTRACORE — Communication</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="js/shell.js"></script>
+<style>
+  /* Wave bars — robust CSS-only animation, no inline override conflicts */
+  .wave-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    height: 80px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 8px;
+    padding: 12px 20px;
+  }
+  .wb {
+    width: 6px;
+    border-radius: 3px;
+    background: var(--blue);
+    opacity: 0.15;
+    transition: background 0.4s, opacity 0.4s;
+  }
+  .wb.idle { height: 10px; }
+  .wb.active {
+    opacity: 1;
+    animation: waveBar 0.9s ease-in-out infinite alternate;
+  }
+  .wb.active:nth-child(1) { animation-delay: 0.0s; }
+  .wb.active:nth-child(2) { animation-delay: 0.1s; }
+  .wb.active:nth-child(3) { animation-delay: 0.2s; }
+  .wb.active:nth-child(4) { animation-delay: 0.3s; }
+  .wb.active:nth-child(5) { animation-delay: 0.4s; }
+  .wb.active:nth-child(6) { animation-delay: 0.3s; }
+  .wb.active:nth-child(7) { animation-delay: 0.2s; }
+  .wb.active:nth-child(8) { animation-delay: 0.1s; }
+  .wb.active:nth-child(9) { animation-delay: 0.0s; }
+  @keyframes waveBar {
+    from { transform: scaleY(0.3); }
+    to   { transform: scaleY(1.0); }
+  }
+  .wb.excellent { background: #34d399; }
+  .wb.good      { background: #60a5fa; }
+  .wb.degraded  { background: #fbbf24; }
+  .wb.critical  { background: #f87171; }
+
+  /* Comm result cells */
+  .comm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .comm-cell { padding: 12px 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; }
+  .comm-cell-lbl { font-family: 'Space Mono', monospace; font-size: 0.63rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 5px; }
+  .comm-cell-val { font-family: 'Space Mono', monospace; font-size: 1rem; font-weight: 700; color: var(--primary); }
+
+  /* Table */
+  .ref-table { width: 100%; border-collapse: collapse; font-family: 'Space Mono', monospace; font-size: 0.8rem; }
+  .ref-table th { padding: 8px 12px; text-align: left; color: var(--muted); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 1px solid var(--border); }
+  .ref-table td { padding: 11px 12px; border-bottom: 1px solid rgba(26,38,64,0.8); }
+  .ref-table tr:last-child td { border-bottom: none; }
+  .ref-table tr:hover td { background: rgba(255,255,255,0.02); }
+</style>
+</head>
+<body>
+<div id="particles"></div>
+<div class="app-layout">
+  <div id="shell-container"></div>
+  <div class="main-content">
+    <div class="mobile-header">
+      <span style="font-family:'Space Mono',monospace;font-weight:700;color:var(--primary)">ASTRACORE</span>
+      <button class="btn btn-ghost" onclick="toggleSidebar()"><i data-lucide="menu" style="width:20px;height:20px"></i></button>
+    </div>
+    <div class="page-content">
+      <div class="page-inner space-y-8">
+        <div>
+          <h1 class="page-title">COMMUNICATION</h1>
+          <p class="page-subtitle">DEEP SPACE SIGNAL DELAY SIMULATOR</p>
+        </div>
+
+        <div class="grid grid-2" style="gap:24px">
+          <!-- Left: input panel -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <i data-lucide="radio" style="width:15px;height:15px;color:var(--primary)"></i>
+                Transmission Parameters
+              </div>
+            </div>
+            <div class="card-body space-y-5">
+              <div class="form-group">
+                <label class="label">Target Destination</label>
+                <select class="select" id="destSel">
+                  <option value="">Select target body...</option>
+                  <option value="ISS">ISS (Low Earth Orbit)</option>
+                  <option value="Moon">Moon</option>
+                  <option value="Mars">Mars</option>
+                  <option value="Venus">Venus</option>
+                  <option value="Jupiter">Jupiter</option>
+                  <option value="Saturn">Saturn</option>
+                  <option value="Deep Space">Deep Space</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="label">Message (Optional)</label>
+                <textarea class="textarea" id="msgInput" rows="3" placeholder="Enter transmission message..."></textarea>
+              </div>
+              <button class="btn btn-primary w-full" id="simBtn" onclick="simulate()" style="justify-content:center">
+                <i data-lucide="send" style="width:15px;height:15px"></i>SIMULATE TRANSMISSION
+              </button>
+            </div>
+          </div>
+
+          <!-- Right: signal analysis -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <i data-lucide="wifi" style="width:15px;height:15px;color:var(--primary)"></i>
+                Signal Analysis
+              </div>
+            </div>
+            <div class="card-body">
+              <!-- Wave visualiser — 9 bars -->
+              <div class="wave-container" id="waveContainer">
+                <div class="wb idle" id="wb0"></div>
+                <div class="wb idle" id="wb1"></div>
+                <div class="wb idle" id="wb2"></div>
+                <div class="wb idle" id="wb3"></div>
+                <div class="wb idle" id="wb4"></div>
+                <div class="wb idle" id="wb5"></div>
+                <div class="wb idle" id="wb6"></div>
+                <div class="wb idle" id="wb7"></div>
+                <div class="wb idle" id="wb8"></div>
+              </div>
+              <p id="awaitMsg" style="text-align:center;font-family:'Space Mono',monospace;font-size:0.72rem;color:rgba(146,163,188,0.4);margin-top:14px">
+                AWAITING TRANSMISSION DATA
+              </p>
+
+              <!-- Results (hidden until simulate runs) -->
+              <div id="resultPanel" style="display:none;margin-top:16px">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                  <span style="font-family:'Space Mono',monospace;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted)">Signal Status</span>
+                  <span class="badge" id="statusBadge"></span>
+                </div>
+                <div class="comm-grid">
+                  <div class="comm-cell"><div class="comm-cell-lbl">Distance</div><div class="comm-cell-val" id="rDist"></div></div>
+                  <div class="comm-cell"><div class="comm-cell-lbl">Signal Strength</div><div class="comm-cell-val" id="rSig"></div></div>
+                  <div class="comm-cell"><div class="comm-cell-lbl">One-Way Delay</div><div class="comm-cell-val" id="rOne"></div></div>
+                  <div class="comm-cell"><div class="comm-cell-lbl">Round-Trip Delay</div><div class="comm-cell-val" id="rRound"></div></div>
+                </div>
+                <div id="msgLog" style="display:none;margin-top:12px;padding:10px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px">
+                  <div style="font-family:'Space Mono',monospace;font-size:0.63rem;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Transmission Log</div>
+                  <p style="font-family:'Space Mono',monospace;font-size:0.78rem;line-height:1.5" id="msgLogText"></p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reference table -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <i data-lucide="globe" style="width:15px;height:15px;color:var(--primary)"></i>
+              Distance Reference Table
+            </div>
+          </div>
+          <div class="card-body" style="overflow-x:auto">
+            <table class="ref-table">
+              <thead>
+                <tr>
+                  <th>Destination</th>
+                  <th>Distance</th>
+                  <th>One-Way Delay</th>
+                  <th>Round-Trip</th>
+                  <th>Signal Quality</th>
+                </tr>
+              </thead>
+              <tbody id="refTable"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+initShell('shell-container');
+lucide.createIcons();
+
+var C = 299792.458; // km/s speed of light
+
+var DESTINATIONS = {
+  'ISS':        { km: 408,          status: 'excellent' },
+  'Moon':       { km: 384400,       status: 'excellent' },
+  'Mars':       { km: 225000000,    status: 'good'      },
+  'Venus':      { km: 261000000,    status: 'good'      },
+  'Jupiter':    { km: 778500000,    status: 'degraded'  },
+  'Saturn':     { km: 1427000000,   status: 'degraded'  },
+  'Deep Space': { km: 4000000000,   status: 'critical'  },
+};
+
+var STATUS_BADGE = { excellent: 'badge-emerald', good: 'badge-blue', degraded: 'badge-yellow', critical: 'badge-red' };
+
+function fmtDist(km) {
+  if (km < 1000)   return km.toLocaleString() + ' km';
+  if (km < 1e6)    return (km / 1000).toFixed(1) + 'K km';
+  if (km < 1e9)    return (km / 1e6).toFixed(1) + 'M km';
+  return (km / 1e9).toFixed(2) + 'B km';
+}
+function fmtDelay(s) {
+  if (s < 0.001)   return Math.round(s * 1000000) + 'µs';
+  if (s < 1)       return Math.round(s * 1000) + ' ms';
+  if (s < 60)      return s.toFixed(2) + ' s';
+  if (s < 3600)    return (s / 60).toFixed(1) + ' min';
+  return (s / 3600).toFixed(1) + ' hr';
+}
+function sigStrength(km) {
+  var logKm = Math.log10(Math.max(km, 1));
+  return Math.max(1, Math.min(100, 100 - logKm * 12)).toFixed(1);
+}
+
+// Build reference table
+document.getElementById('refTable').innerHTML = Object.keys(DESTINATIONS).map(function(name) {
+  var d = DESTINATIONS[name];
+  var one = d.km / C;
+  var rt  = one * 2;
+  var sig = sigStrength(d.km);
+  return '<tr>' +
+    '<td style="font-weight:700">' + name + '</td>' +
+    '<td style="color:var(--muted)">' + fmtDist(d.km) + '</td>' +
+    '<td style="color:var(--primary)">' + fmtDelay(one) + '</td>' +
+    '<td style="color:var(--purple)">' + fmtDelay(rt) + '</td>' +
+    '<td><span class="badge ' + STATUS_BADGE[d.status] + '">' + d.status + '</span></td>' +
+  '</tr>';
+}).join('');
+
+// Wave control
+function setWave(status) {
+  var colorMap = { excellent: 'excellent', good: 'good', degraded: 'degraded', critical: 'critical' };
+  var cls = colorMap[status] || 'good';
+  // Heights for a mountain shape: short → tall → short
+  var heights = [20, 30, 42, 56, 64, 56, 42, 30, 20];
+  for (var i = 0; i < 9; i++) {
+    var b = document.getElementById('wb' + i);
+    b.className = 'wb active ' + cls;
+    b.style.height = heights[i] + 'px';
+  }
+}
+function resetWave() {
+  for (var i = 0; i < 9; i++) {
+    var b = document.getElementById('wb' + i);
+    b.className = 'wb idle';
+    b.style.height = '10px';
+  }
+}
+
+// Simulate
+function simulate() {
+  var dest = document.getElementById('destSel').value;
+  var msg  = document.getElementById('msgInput').value.trim();
+
+  if (!dest) {
+    showToast('Error', 'Please select a target destination.', 'error');
+    return;
+  }
+
+  var btn = document.getElementById('simBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i data-lucide="loader-2" style="width:15px;height:15px;animation:spin 1s linear infinite"></i>TRANSMITTING...';
+  if (!document.getElementById('spinStyle')) {
+    var s = document.createElement('style');
+    s.id = 'spinStyle';
+    s.textContent = '@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}';
+    document.head.appendChild(s);
+  }
+  lucide.createIcons();
+
+  // Briefly show idle wave pulsing
+  resetWave();
+
+  setTimeout(function() {
+    var d = DESTINATIONS[dest];
+    var oneWay = d.km / C;
+    var rt     = oneWay * 2;
+    var sig    = sigStrength(d.km);
+
+    // Activate wave
+    setWave(d.status);
+
+    // Hide await message, show result panel
+    document.getElementById('awaitMsg').style.display = 'none';
+    document.getElementById('resultPanel').style.display = 'block';
+
+    // Status badge
+    var sb = document.getElementById('statusBadge');
+    sb.className = 'badge ' + STATUS_BADGE[d.status];
+    sb.textContent = d.status.toUpperCase();
+
+    // Fill metrics
+    document.getElementById('rDist').textContent  = fmtDist(d.km);
+    document.getElementById('rSig').textContent   = sig + '%';
+    document.getElementById('rOne').textContent   = fmtDelay(oneWay);
+    document.getElementById('rRound').textContent = fmtDelay(rt);
+
+    // Message log
+    if (msg) {
+      var now = new Date().toLocaleTimeString();
+      document.getElementById('msgLogText').textContent =
+        '[' + now + '] TX → ' + dest.toUpperCase() + ': "' + msg +
+        '" | Delay: ' + fmtDelay(oneWay) + ' | Status: ' + d.status.toUpperCase();
+      document.getElementById('msgLog').style.display = 'block';
+    } else {
+      document.getElementById('msgLog').style.display = 'none';
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="send" style="width:15px;height:15px"></i>SIMULATE TRANSMISSION';
+    lucide.createIcons();
+    showToast('Transmission Complete', 'Signal routed to ' + dest + ' — ' + fmtDelay(oneWay) + ' one-way delay');
+  }, 1200);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ASTRACORE — AI Predictions</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="js/shell.js"></script>
+</head>
+<body>
+<div id="particles"></div>
+<div class="app-layout">
+  <div id="shell-container"></div>
+  <div class="main-content">
+    <div class="mobile-header">
+      <span style="font-family:'Space Mono',monospace;font-weight:700;color:var(--primary)">ASTRACORE</span>
+      <button class="btn btn-ghost" onclick="toggleSidebar()"><i data-lucide="menu" style="width:20px;height:20px"></i></button>
+    </div>
+    <div class="page-content">
+      <div class="page-inner space-y-8">
+        <div>
+          <h1 class="page-title">AI PREDICTIONS</h1>
+          <p class="page-subtitle">MISSION OUTCOME ANALYSIS ENGINE</p>
+        </div>
+
+        <div class="card" style="border-color:rgba(0,128,255,0.25);box-shadow:inset 0 0 10px rgba(0,128,255,0.08),0 0 20px rgba(0,128,255,0.08)">
+          <div class="card-header"><div class="card-title"><i data-lucide="brain-circuit" style="width:15px;height:15px;color:var(--primary)"></i>Run Prediction Analysis</div></div>
+          <div class="card-body">
+            <div class="grid grid-2" style="gap:16px;margin-bottom:16px">
+              <div class="form-group">
+                <label class="label">Link to Mission (Optional)</label>
+                <select class="select" id="missionSel">
+                  <option value="">Select mission...</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="label">Or Select Destination</label>
+                <select class="select" id="destSel">
+                  <option value="">Choose target...</option>
+                  <option value="Moon">Moon</option>
+                  <option value="Mars">Mars</option>
+                  <option value="Venus">Venus</option>
+                  <option value="Jupiter">Jupiter</option>
+                  <option value="Saturn">Saturn</option>
+                  <option value="Deep Space">Deep Space</option>
+                  <option value="ISS (Low Earth Orbit)">ISS (Low Earth Orbit)</option>
+                </select>
+              </div>
+            </div>
+            <button class="btn btn-primary" id="runBtn" onclick="runPrediction()">
+              <i data-lucide="brain-circuit" style="width:15px;height:15px"></i>RUN ANALYSIS
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <h2 class="mono" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:16px">PREDICTION LOG</h2>
+          <div class="space-y-4" id="predList">
+            <div style="text-align:center;padding:60px 0" id="emptyState">
+              <i data-lucide="brain-circuit" style="width:48px;height:48px;opacity:0.2;display:block;margin:0 auto 16px"></i>
+              <p class="mono" style="color:var(--muted)">NO PREDICTIONS YET — RUN YOUR FIRST ANALYSIS</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+initShell('shell-container');
+
+// Populate missions dropdown via JS (not template literals in HTML)
+const mSel = document.getElementById('missionSel');
+DEMO.missions.forEach(function(m) {
+  const opt = document.createElement('option');
+  opt.value = m.id;
+  opt.textContent = m.name + ' (' + m.destination + ')';
+  mSel.appendChild(opt);
+});
+
+lucide.createIcons();
+
+const predictions = [];
+const RISK_FACTORS = [
+  'Solar radiation exposure', 'Fuel efficiency variance', 'Communication delay',
+  'Debris field proximity', 'Thermal stress', 'Microgravity effects',
+  'Propulsion reliability', 'Life support margins', 'Orbital mechanics',
+  'Crew fatigue factor', 'Equipment age', 'Weather window', 'Launch vehicle reliability'
+];
+const RECS = [
+  'Proceed with enhanced monitoring protocols. Recommend additional telemetry checkpoints.',
+  'Mission viable. Suggest increasing fuel reserves by 8% as contingency buffer.',
+  'High confidence outcome. Standard precautionary measures sufficient.',
+  'Recommend mission postponement pending system diagnostics review.',
+  'Proceed with caution. Assign senior crew complement for anomaly resolution.',
+  'All parameters within acceptable range. Nominal launch authorization recommended.',
+];
+
+function runPrediction() {
+  const mId = document.getElementById('missionSel').value;
+  const dest = document.getElementById('destSel').value;
+  if (!mId && !dest) { showToast('Error', 'Select a mission or destination.', 'error'); return; }
+
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i data-lucide="loader-2" style="width:15px;height:15px;animation:spin 1s linear infinite"></i>COMPUTING...';
+  // Add spin keyframe if not present
+  if (!document.getElementById('spinStyle')) {
+    const s = document.createElement('style');
+    s.id = 'spinStyle';
+    s.textContent = '@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}';
+    document.head.appendChild(s);
+  }
+  lucide.createIcons();
+
+  setTimeout(function() {
+    const m = DEMO.missions.find(function(x) { return x.id === parseInt(mId); });
+    const sp = Math.random() * 40 + 55;
+    const conf = Math.random() * 20 + 75;
+    const riskLevel = sp > 85 ? 'low' : sp > 70 ? 'medium' : sp > 55 ? 'high' : 'critical';
+    const numFactors = Math.floor(Math.random() * 3) + 2;
+    const factors = [...RISK_FACTORS].sort(function() { return Math.random() - 0.5; }).slice(0, numFactors);
+
+    predictions.unshift({
+      id: Date.now(),
+      missionName: m ? m.name : null,
+      destination: dest || (m ? m.destination : ''),
+      successProbability: sp.toFixed(1),
+      confidence: conf.toFixed(1),
+      riskLevel: riskLevel,
+      riskFactors: factors,
+      recommendation: RECS[Math.floor(Math.random() * RECS.length)],
+      createdAt: new Date(),
+    });
+
+    renderPredictions();
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="brain-circuit" style="width:15px;height:15px"></i>RUN ANALYSIS';
+    lucide.createIcons();
+    showToast('Analysis Complete', 'AI prediction generated successfully.');
+  }, 1800);
+}
+
+function renderPredictions() {
+  const empty = document.getElementById('emptyState');
+  if (empty) empty.remove();
+
+  document.getElementById('predList').innerHTML = predictions.map(function(p) {
+    const destLine = p.destination
+      ? '<p style="font-size:0.75rem;color:var(--muted);font-family:\'Space Mono\',monospace;margin-top:2px">TARGET: ' + p.destination + '</p>'
+      : '';
+    const factorBadges = p.riskFactors.map(function(rf) {
+      return '<span class="badge badge-muted">' + rf + '</span>';
+    }).join('');
+    return '<div class="card p-5">' +
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px">' +
+        '<div>' +
+          '<p class="mono" style="font-size:0.85rem;font-weight:700">' + (p.missionName || 'STANDALONE ANALYSIS') + '</p>' +
+          '<p style="font-size:0.75rem;color:var(--muted);font-family:\'Space Mono\',monospace;margin-top:2px">' + fmtTime(p.createdAt) + ' — ID: ' + String(p.id).slice(-4).padStart(4, '0') + '</p>' +
+          destLine +
+        '</div>' + riskBadge(p.riskLevel) +
+      '</div>' +
+      '<div class="grid grid-2" style="gap:16px;margin-bottom:16px">' +
+        '<div>' +
+          '<div style="display:flex;justify-content:space-between;font-family:\'Space Mono\',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:6px"><span>SUCCESS PROBABILITY</span><span style="color:var(--emerald)">' + p.successProbability + '%</span></div>' +
+          '<div class="progress-wrap"><div class="progress-bar" style="width:' + p.successProbability + '%;background:var(--emerald)"></div></div>' +
+        '</div>' +
+        '<div>' +
+          '<div style="display:flex;justify-content:space-between;font-family:\'Space Mono\',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:6px"><span>CONFIDENCE</span><span style="color:var(--primary)">' + p.confidence + '%</span></div>' +
+          '<div class="progress-wrap"><div class="progress-bar" style="width:' + p.confidence + '%;background:var(--primary)"></div></div>' +
+        '</div>' +
+      '</div>' +
+      '<p style="font-family:\'Space Mono\',monospace;font-size:0.78rem;color:var(--muted);padding:10px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;line-height:1.5">' + p.recommendation + '</p>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px">' + factorBadges + '</div>' +
+    '</div>';
+  }).join('');
+}
+</script>
+</body>
+</html>

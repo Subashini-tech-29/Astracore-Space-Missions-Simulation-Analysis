@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ASTRACORE — Space News</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="js/shell.js"></script>
+</head>
+<body>
+<div id="particles"></div>
+<div class="app-layout">
+  <div id="shell-container"></div>
+  <div class="main-content">
+    <div class="mobile-header">
+      <span style="font-family:'Space Mono',monospace;font-weight:700;color:var(--primary)">ASTRACORE</span>
+      <button class="btn btn-ghost" onclick="toggleSidebar()"><i data-lucide="menu" style="width:20px;height:20px"></i></button>
+    </div>
+    <div class="page-content">
+      <div class="page-inner space-y-6">
+
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+          <div>
+            <h1 class="page-title">SPACE NEWS</h1>
+            <p class="page-subtitle">DEEP SPACE INTELLIGENCE FEED — LIVE ARTICLES</p>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <select class="select" id="agencyFilter" style="width:180px" onchange="loadNews()">
+              <option value="">All Agencies</option>
+              <option value="NASA">NASA</option>
+              <option value="SpaceX">SpaceX</option>
+              <option value="ESA">ESA</option>
+              <option value="ISRO">ISRO</option>
+              <option value="Arstechnica">Ars Technica</option>
+              <option value="NASASpaceFlight">NASASpaceFlight</option>
+            </select>
+            <select class="select" id="countFilter" style="width:120px" onchange="loadNews()">
+              <option value="12">12 articles</option>
+              <option value="24">24 articles</option>
+              <option value="36">36 articles</option>
+            </select>
+            <button class="btn btn-outline btn-sm" onclick="loadNews()">
+              <i data-lucide="refresh-cw" style="width:13px;height:13px"></i>REFRESH
+            </button>
+          </div>
+        </div>
+
+        <!-- Live indicator -->
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="live-dot"><span class="dot live"></span></span>
+          <span class="mono" style="font-size:0.72rem;color:var(--muted)">LIVE FEED FROM SPACEFLIGHT NEWS API — CLICK ANY ARTICLE TO OPEN ORIGINAL SOURCE</span>
+        </div>
+
+        <!-- Loading skeleton -->
+        <div class="grid grid-3" id="newsGrid" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">
+          ${Array.from({length:6},()=>`<div class="skeleton" style="height:320px;border-radius:8px"></div>`).join('')}
+        </div>
+
+        <!-- Error state (hidden) -->
+        <div id="errorState" style="display:none;text-align:center;padding:60px 0">
+          <i data-lucide="wifi-off" style="width:48px;height:48px;opacity:0.3;display:block;margin:0 auto 16px;color:var(--muted)"></i>
+          <p class="mono" style="color:var(--muted);margin-bottom:16px">UNABLE TO FETCH LIVE FEED</p>
+          <p style="font-size:0.82rem;color:var(--muted);max-width:400px;margin:0 auto 20px;line-height:1.5">This requires an internet connection to load real news from the Spaceflight News API.</p>
+          <button class="btn btn-outline" onclick="loadNews()"><i data-lucide="refresh-cw" style="width:13px;height:13px"></i>TRY AGAIN</button>
+        </div>
+
+        <!-- Load more -->
+        <div id="loadMoreWrap" style="display:none;text-align:center;padding-top:8px">
+          <button class="btn btn-outline" onclick="loadMore()"><i data-lucide="chevron-down" style="width:14px;height:14px"></i>LOAD MORE</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+initShell('shell-container');
+lucide.createIcons();
+
+let currentOffset = 0;
+let currentArticles = [];
+
+const SOURCE_BADGE_COLOR = {
+  'NASA':            'badge-blue',
+  'SpaceX':          'badge-emerald',
+  'ESA':             'badge-purple',
+  'ISRO':            'badge-orange',
+  'NASASpaceFlight': 'badge-blue',
+  'Arstechnica':     'badge-muted',
+  'Space.com':       'badge-blue',
+  'Spaceflight Now': 'badge-muted',
+};
+
+function getBadgeClass(source) {
+  for (const key of Object.keys(SOURCE_BADGE_COLOR)) {
+    if (source && source.toLowerCase().includes(key.toLowerCase())) {
+      return SOURCE_BADGE_COLOR[key];
+    }
+  }
+  return 'badge-muted';
+}
+
+function fmtNewsDate(dateStr) {
+  try {
+    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch { return ''; }
+}
+
+function articleCard(a) {
+  const badgeCls = getBadgeClass(a.news_site);
+  const imgHtml = a.image_url
+    ? `<div class="news-img">
+        <img src="${a.image_url}" alt="${a.title.replace(/"/g,'')}" loading="lazy" onerror="this.parentElement.style.display='none'">
+        <div class="news-img-overlay"></div>
+        <div class="news-img-badge"><span class="badge ${badgeCls}">${a.news_site||'SPACE'}</span></div>
+      </div>`
+    : `<div style="padding:12px 16px 4px"><span class="badge ${badgeCls}">${a.news_site||'SPACE'}</span></div>`;
+
+  return `<div class="card news-card" onclick="window.open('${a.url}','_blank','noopener,noreferrer')" title="Click to read original article: ${a.title.replace(/'/g,'&#39;')}">
+    ${imgHtml}
+    <div class="news-body">
+      <h3 class="news-title">${a.title}</h3>
+      <p class="news-summary">${a.summary || 'No summary available.'}</p>
+      <div class="news-footer">
+        <span class="news-date">${fmtNewsDate(a.published_at)}</span>
+        <span class="btn btn-ghost btn-sm" style="font-size:0.7rem;pointer-events:none">
+          <i data-lucide="external-link" style="width:11px;height:11px"></i>READ MORE
+        </span>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function loadNews(append = false) {
+  const agency = document.getElementById('agencyFilter').value;
+  const count  = parseInt(document.getElementById('countFilter').value) || 12;
+
+  if (!append) {
+    currentOffset = 0;
+    currentArticles = [];
+    document.getElementById('newsGrid').innerHTML = Array.from({length:6},()=>`<div class="skeleton" style="height:320px;border-radius:8px"></div>`).join('');
+    document.getElementById('errorState').style.display = 'none';
+    document.getElementById('loadMoreWrap').style.display = 'none';
+  }
+
+  // Build query params
+  const params = new URLSearchParams();
+  params.set('limit', count);
+  params.set('offset', currentOffset);
+  params.set('ordering', '-published_at');
+  if (agency) {
+    // Some sources use news_site filter, for ISRO we search
+    if (agency === 'ISRO') {
+      params.set('search', 'ISRO');
+    } else {
+      params.set('news_site', agency);
+    }
+  }
+
+  const url = `https://api.spaceflightnewsapi.net/v4/articles/?${params.toString()}`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    const articles = json.results || [];
+
+    currentArticles = append ? [...currentArticles, ...articles] : articles;
+    currentOffset += articles.length;
+
+    if (currentArticles.length === 0) {
+      document.getElementById('newsGrid').innerHTML = `
+        <div style="grid-column:1/-1;text-align:center;padding:60px 0">
+          <i data-lucide="newspaper" style="width:48px;height:48px;opacity:0.2;display:block;margin:0 auto 16px"></i>
+          <p class="mono" style="color:var(--muted)">NO ARTICLES FOUND FOR THIS FILTER</p>
+        </div>`;
+      lucide.createIcons();
+      return;
+    }
+
+    document.getElementById('newsGrid').innerHTML = currentArticles.map(articleCard).join('');
+    lucide.createIcons();
+
+    // Show/hide load more
+    document.getElementById('loadMoreWrap').style.display = articles.length >= count ? 'block' : 'none';
+
+  } catch (err) {
+    if (!append) {
+      document.getElementById('newsGrid').innerHTML = '';
+      document.getElementById('errorState').style.display = 'block';
+      lucide.createIcons();
+    } else {
+      showToast('Error', 'Failed to load more articles.', 'error');
+    }
+  }
+}
+
+function loadMore() {
+  loadNews(true);
+}
+
+// Load on startup
+loadNews();
+</script>
+</body>
+</html>

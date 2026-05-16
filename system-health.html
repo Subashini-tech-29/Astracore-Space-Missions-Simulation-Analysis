@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ASTRACORE — System Health</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="js/shell.js"></script>
+</head>
+<body>
+<div id="particles"></div>
+<div class="app-layout">
+  <div id="shell-container"></div>
+  <div class="main-content">
+    <div class="mobile-header">
+      <span style="font-family:'Space Mono',monospace;font-weight:700;color:var(--primary)">ASTRACORE</span>
+      <button class="btn btn-ghost" onclick="toggleSidebar()"><i data-lucide="menu" style="width:20px;height:20px"></i></button>
+    </div>
+    <div class="page-content">
+      <div class="page-inner space-y-8">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+          <div>
+            <h1 class="page-title">SYSTEM HEALTH</h1>
+            <p class="page-subtitle">REAL-TIME SPACECRAFT DIAGNOSTICS</p>
+          </div>
+          <span class="badge badge-emerald" style="font-size:0.8rem;padding:6px 12px">
+            <i data-lucide="cpu" style="width:13px;height:13px"></i>THRUSTERS: NOMINAL
+          </span>
+        </div>
+
+        <div class="grid grid-3" id="gaugeGrid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr))"></div>
+
+        <div class="card">
+          <div class="card-header"><div class="card-title"><i data-lucide="activity" style="width:15px;height:15px;color:var(--primary)"></i>System Telemetry History</div></div>
+          <div class="card-body" style="height:280px"><canvas id="histChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+initShell('shell-container');
+lucide.createIcons();
+
+let health = {
+  fuelLevel: 67.3,
+  battery: 92.1,
+  oxygenLevel: 98.4,
+  signalStrength: 73.8,
+  temperature: 22.5,
+};
+
+const gauges = [
+  { label:'Fuel Level',     key:'fuelLevel',     unit:'%',  color:'#0080ff', max:100, icon:'zap' },
+  { label:'Battery',        key:'battery',        unit:'%',  color:'#a020f0', max:100, icon:'battery-medium' },
+  { label:'Oxygen Level',   key:'oxygenLevel',    unit:'%',  color:'#34d399', max:100, icon:'wind' },
+  { label:'Signal Strength',key:'signalStrength', unit:'%',  color:'#fbbf24', max:100, icon:'wifi' },
+  { label:'Temperature',    key:'temperature',    unit:'°C', color:'#f53d3d', max:60,  icon:'thermometer' },
+];
+
+function buildGauge(id, value, max, color, size=130){
+  const r=48, circ=2*Math.PI*r, pct=Math.min(value/max,1), dash=pct*circ;
+  return `<svg id="${id}" width="${size}" height="${size}" viewBox="0 0 110 110" style="transform:rotate(-90deg)">
+    <circle cx="55" cy="55" r="${r}" fill="none" stroke="hsl(215,35%,12%)" stroke-width="9"/>
+    <circle cx="55" cy="55" r="${r}" fill="none" stroke="${color}" stroke-width="9"
+      stroke-dasharray="${dash} ${circ-dash}" stroke-linecap="round"
+      style="filter:drop-shadow(0 0 5px ${color});transition:stroke-dasharray 0.8s ease"/>
+  </svg>`;
+}
+
+function renderGauges(){
+  document.getElementById('gaugeGrid').innerHTML = gauges.map(g=>`
+    <div class="card gauge-wrap">
+      <div class="gauge-svg-wrap">
+        ${buildGauge('gauge-'+g.key, health[g.key], g.max, g.color)}
+        <div class="gauge-center">
+          <i data-lucide="${g.icon}" style="width:18px;height:18px;color:${g.color}"></i>
+          <span class="mono" style="font-size:1rem;font-weight:700;color:${g.color}">${health[g.key].toFixed(1)}${g.unit}</span>
+        </div>
+      </div>
+      <div class="gauge-label">${g.label}</div>
+    </div>`).join('');
+  lucide.createIcons();
+}
+renderGauges();
+
+// Telemetry history chart
+Chart.defaults.color='#92a3bc'; Chart.defaults.font.family="'Space Mono',monospace"; Chart.defaults.font.size=10;
+const histLabels=[], histFuel=[], histBatt=[], histSig=[], histO2=[];
+for(let i=29;i>=0;i--){
+  const d=new Date(Date.now()-i*5*60000);
+  histLabels.push(d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}));
+  histFuel.push(+(health.fuelLevel+(Math.random()-0.5)*3).toFixed(1));
+  histBatt.push(+(health.battery+(Math.random()-0.5)*2).toFixed(1));
+  histSig.push(+(health.signalStrength+(Math.random()-0.5)*8).toFixed(1));
+  histO2.push(+(health.oxygenLevel+(Math.random()-0.5)*0.5).toFixed(2));
+}
+const gridColor='rgba(26,38,64,0.8)';
+new Chart(document.getElementById('histChart'),{
+  type:'line',
+  data:{
+    labels:histLabels,
+    datasets:[
+      {label:'Fuel %',   data:histFuel, borderColor:'#0080ff',stroke:1.5,pointRadius:0,fill:false,tension:0.3},
+      {label:'Battery %',data:histBatt, borderColor:'#a020f0',stroke:1.5,pointRadius:0,fill:false,tension:0.3},
+      {label:'Signal %', data:histSig,  borderColor:'#fbbf24',stroke:1.5,pointRadius:0,fill:false,tension:0.3},
+      {label:'O₂ %',    data:histO2,  borderColor:'#34d399',stroke:1.5,pointRadius:0,fill:false,tension:0.3},
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    scales:{
+      x:{grid:{color:gridColor},ticks:{maxRotation:0,maxTicksLimit:8}},
+      y:{grid:{color:gridColor}}
+    },
+    plugins:{legend:{labels:{color:'#92a3bc'}},tooltip:{backgroundColor:'#0d1b2e',borderColor:'#1a2640',borderWidth:1}}
+  }
+});
+
+// Live updates
+setInterval(()=>{
+  health.fuelLevel=Math.max(0,Math.min(100,health.fuelLevel+(Math.random()-0.5)*0.5));
+  health.battery=Math.max(0,Math.min(100,health.battery+(Math.random()-0.5)*0.3));
+  health.oxygenLevel=Math.max(90,Math.min(100,health.oxygenLevel+(Math.random()-0.5)*0.1));
+  health.signalStrength=Math.max(0,Math.min(100,health.signalStrength+(Math.random()-0.5)*1));
+  health.temperature=Math.max(15,Math.min(45,health.temperature+(Math.random()-0.5)*0.4));
+  renderGauges();
+},3000);
+</script>
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ASTRACORE — Dashboard</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="js/shell.js"></script>
+</head>
+<body>
+<div id="particles"></div>
+<div class="app-layout">
+  <div id="shell-container"></div>
+  <div class="main-content">
+    <div class="mobile-header">
+      <span style="font-family:'Space Mono',monospace;font-weight:700;color:var(--primary);text-shadow:0 0 10px rgba(0,128,255,0.5)">ASTRACORE</span>
+      <button class="btn btn-ghost" onclick="toggleSidebar()"><i data-lucide="menu" style="width:20px;height:20px"></i></button>
+    </div>
+    <div class="page-content">
+      <div class="page-inner space-y-8">
+        <div>
+          <h1 class="page-title">MISSION CONTROL</h1>
+          <p class="page-subtitle">ASTRACORE — SPACE OPERATIONS DASHBOARD</p>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-4" id="statsGrid"></div>
+
+        <!-- Live Telemetry -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <i data-lucide="activity" style="width:16px;height:16px;color:var(--primary)"></i>
+              Live Spacecraft Telemetry
+              <span style="margin-left:auto" id="telestatus">
+                <span class="live-dot"><span class="dot live"></span><span class="mono" style="font-size:0.65rem;color:var(--emerald)">LIVE</span></span>
+              </span>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="tele-grid" id="teleGrid"></div>
+          </div>
+        </div>
+
+        <!-- Active Missions + Alerts -->
+        <div class="grid grid-2" style="gap:24px">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><i data-lucide="activity" style="width:16px;height:16px;color:var(--emerald)"></i> Active Missions</div>
+            </div>
+            <div class="card-body space-y-3" id="activeMissions"></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><i data-lucide="alert-triangle" style="width:16px;height:16px;color:var(--red)"></i> Live Alert Feed</div>
+            </div>
+            <div class="card-body space-y-3" id="liveAlerts"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+initShell('shell-container');
+
+// Stats
+const S = DEMO.summary;
+const stats = [
+  { label:'Total Missions',   value:S.totalMissions,          color:'var(--primary)',  icon:'rocket' },
+  { label:'Active Missions',  value:S.activeMissions,         color:'var(--emerald)',  icon:'activity' },
+  { label:'Success Rate',     value:S.successRate+'%',        color:'var(--purple)',   icon:'trending-up' },
+  { label:'Critical Alerts',  value:S.criticalAlerts, sub:S.totalAlerts+' total', color:'var(--red)', icon:'alert-triangle' },
+  { label:'System Health',    value:S.systemHealthScore+'%',  color:'var(--yellow)',   icon:'zap' },
+  { label:'Signal Status',    value:'NOMINAL',                color:'var(--emerald)',  icon:'wifi' },
+  { label:'Operators Online', value:S.totalUsers,             color:'var(--blue)',     icon:'users' },
+  { label:'Unacknowledged',   value:DEMO.alerts.filter(a=>!a.acknowledged).length, sub:'alerts pending', color:'var(--orange)', icon:'bell' },
+];
+document.getElementById('statsGrid').innerHTML = stats.map(s=>`
+  <div class="card stat-card">
+    <div class="stat-card-top">
+      <div>
+        <div class="stat-card-label">${s.label}</div>
+        <div class="stat-card-value" style="color:${s.color}">${s.value}</div>
+        ${s.sub?`<div class="stat-card-sub">${s.sub}</div>`:''}
+      </div>
+      <div class="stat-card-icon"><i data-lucide="${s.icon}" style="width:22px;height:22px;color:${s.color}"></i></div>
+    </div>
+  </div>`).join('');
+
+// Telemetry live
+let tele = { fuelLevel:67.3, temperature:22.5, battery:92.1, signalStrength:73.8, oxygenLevel:98.4, altitude:408, velocity:27600, distanceFromEarth:408000, radiationLevel:12.4, thrusterStatus:'nominal' };
+function renderTele() {
+  const cells = [
+    { label:'Fuel',       key:'fuelLevel',         unit:'%',    color:'var(--primary)', warn:v=>v<30, crit:v=>v<15, icon:'gauge' },
+    { label:'Temperature',key:'temperature',        unit:'°C',   color:'var(--orange)',  warn:v=>v>30, crit:v=>v>34, icon:'thermometer' },
+    { label:'Battery',    key:'battery',            unit:'%',    color:'var(--emerald)', warn:v=>v<80, crit:v=>v<70, icon:'battery-medium' },
+    { label:'Signal',     key:'signalStrength',     unit:'%',    color:'var(--blue)',    warn:v=>v<50, crit:v=>v<35, icon:'radio' },
+    { label:'O₂ Level',  key:'oxygenLevel',        unit:'%',    color:'var(--cyan)',    warn:v=>v<97, crit:v=>v<96, icon:'wind' },
+    { label:'Altitude',   key:'altitude',           unit:'km',   color:'var(--purple)',  fmt:v=>v.toFixed(0), icon:'rocket' },
+    { label:'Velocity',   key:'velocity',           unit:'km/h', color:'var(--yellow)',  fmt:v=>v.toFixed(0), icon:'activity' },
+    { label:'Distance',   key:'distanceFromEarth',  unit:'km',   color:'var(--sky)',     fmt:v=>(v/1000).toFixed(0)+'k', icon:'wifi' },
+    { label:'Radiation',  key:'radiationLevel',     unit:'μSv/h',color:'var(--rose)',    warn:v=>v>20, crit:v=>v>30, icon:'atom' },
+  ];
+  document.getElementById('teleGrid').innerHTML = cells.map(c=>{
+    const v=tele[c.key]; const isCrit=c.crit&&c.crit(v); const isWarn=c.warn&&c.warn(v);
+    const col=isCrit?'var(--red)':isWarn?'var(--yellow)':c.color;
+    const disp=c.fmt?c.fmt(v):v.toFixed(1);
+    return `<div class="tele-cell">
+      <div class="tele-label" style="color:${col}"><i data-lucide="${c.icon}" style="width:11px;height:11px"></i>${c.label}</div>
+      <div class="tele-value" style="color:${col}">${disp}<span class="tele-unit">${c.unit}</span></div>
+    </div>`;
+  }).join('') + `<div class="tele-cell">
+    <div class="tele-label"><i data-lucide="zap" style="width:11px;height:11px;color:${tele.thrusterStatus==='warning'?'var(--yellow)':'var(--emerald)'}"></i>Thruster</div>
+    <div class="tele-value" style="color:${tele.thrusterStatus==='warning'?'var(--yellow)':'var(--emerald)'};text-transform:uppercase">${tele.thrusterStatus}</div>
+  </div>`;
+  lucide.createIcons();
+}
+renderTele();
+setInterval(()=>{
+  tele.fuelLevel    = Math.max(0,  Math.min(100, tele.fuelLevel    + (Math.random()-0.5)*0.3));
+  tele.temperature  = Math.max(15, Math.min(45,  tele.temperature  + (Math.random()-0.5)*0.4));
+  tele.battery      = Math.max(0,  Math.min(100, tele.battery      + (Math.random()-0.5)*0.2));
+  tele.signalStrength=Math.max(0,  Math.min(100, tele.signalStrength+(Math.random()-0.5)*0.8));
+  tele.oxygenLevel  = Math.max(90, Math.min(100, tele.oxygenLevel  + (Math.random()-0.5)*0.1));
+  tele.altitude     = Math.max(380,Math.min(440, tele.altitude     + (Math.random()-0.5)*0.5));
+  tele.velocity     = Math.max(27000,Math.min(28500,tele.velocity  + (Math.random()-0.5)*30));
+  tele.distanceFromEarth = Math.max(380000,Math.min(450000,tele.distanceFromEarth+(Math.random()-0.5)*50));
+  tele.radiationLevel = Math.max(5, Math.min(45, tele.radiationLevel+(Math.random()-0.5)*0.5));
+  renderTele();
+},2000);
+
+// Active missions
+const active = DEMO.missions.filter(m=>m.status==='active');
+document.getElementById('activeMissions').innerHTML = active.length===0
+  ? `<p style="text-align:center;color:var(--muted);font-family:'Space Mono',monospace;padding:20px 0">NO ACTIVE MISSIONS</p>`
+  : active.map(m=>`<div class="row-item">
+    <div style="display:flex;align-items:center;gap:10px;min-width:0">
+      <i data-lucide="rocket" style="width:16px;height:16px;color:var(--primary);flex-shrink:0"></i>
+      <div style="min-width:0"><p class="mono" style="font-size:0.85rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.name}</p><p style="font-size:0.75rem;color:var(--muted)">${m.destination}</p></div>
+    </div>${statusBadge(m.status)}</div>`).join('');
+
+// Alerts
+const alerts = DEMO.alerts.filter(a=>!a.acknowledged).slice(0,5);
+document.getElementById('liveAlerts').innerHTML = alerts.length===0
+  ? `<div style="display:flex;align-items:center;gap:8px;padding:20px 0;justify-content:center"><i data-lucide="check-circle" style="width:18px;height:18px;color:var(--emerald)"></i><p class="mono" style="color:var(--muted);font-size:0.85rem">ALL SYSTEMS NOMINAL</p></div>`
+  : alerts.map(a=>`<div class="alert-row ${a.severity}">
+    <i data-lucide="alert-triangle" style="width:16px;height:16px;color:${severityColor(a.severity)};flex-shrink:0;margin-top:2px"></i>
+    <div style="min-width:0;flex:1">
+      <p class="mono" style="font-size:0.75rem;font-weight:700;text-transform:uppercase">${a.type.replace(/_/g,' ')}</p>
+      <p style="font-size:0.8rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.message}</p>
+    </div>${severityBadge(a.severity)}</div>`).join('');
+
+lucide.createIcons();
+</script>
+</body>
+</html>

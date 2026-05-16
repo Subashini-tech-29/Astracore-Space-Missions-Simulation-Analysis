@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ASTRACORE — Operators</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="js/shell.js"></script>
+</head>
+<body>
+<div id="particles"></div>
+<div class="app-layout">
+  <div id="shell-container"></div>
+  <div class="main-content">
+    <div class="mobile-header">
+      <span style="font-family:'Space Mono',monospace;font-weight:700;color:var(--primary)">ASTRACORE</span>
+      <button class="btn btn-ghost" onclick="toggleSidebar()"><i data-lucide="menu" style="width:20px;height:20px"></i></button>
+    </div>
+    <div class="page-content">
+      <div class="page-inner space-y-6">
+        <div>
+          <h1 class="page-title">OPERATORS</h1>
+          <p class="page-subtitle">PERSONNEL MANAGEMENT — ADMIN ACCESS ONLY</p>
+        </div>
+
+        <!-- Stats populated by JS -->
+        <div class="grid grid-3" id="statsGrid"></div>
+
+        <!-- Personnel table populated by JS -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <i data-lucide="users" style="width:15px;height:15px;color:var(--primary)"></i>Personnel Registry
+            </div>
+          </div>
+          <div class="card-body space-y-2" id="userList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+initShell('shell-container');
+
+// Render stat cards via JS
+var admins = DEMO.users.filter(function(u) { return u.role === 'admin'; }).length;
+var regular = DEMO.users.filter(function(u) { return u.role === 'user'; }).length;
+
+document.getElementById('statsGrid').innerHTML =
+  '<div class="card p-5" style="display:flex;align-items:center;gap:16px">' +
+    '<i data-lucide="users" style="width:32px;height:32px;color:var(--primary)"></i>' +
+    '<div><p class="mono" style="font-size:1.5rem;font-weight:700;color:var(--primary)">' + DEMO.users.length + '</p>' +
+    '<p class="mono" style="font-size:0.7rem;text-transform:uppercase;color:var(--muted)">Total Operators</p></div>' +
+  '</div>' +
+  '<div class="card p-5" style="display:flex;align-items:center;gap:16px">' +
+    '<i data-lucide="shield-check" style="width:32px;height:32px;color:var(--red)"></i>' +
+    '<div><p class="mono" style="font-size:1.5rem;font-weight:700;color:var(--red)">' + admins + '</p>' +
+    '<p class="mono" style="font-size:0.7rem;text-transform:uppercase;color:var(--muted)">Administrators</p></div>' +
+  '</div>' +
+  '<div class="card p-5" style="display:flex;align-items:center;gap:16px">' +
+    '<i data-lucide="user" style="width:32px;height:32px;color:var(--emerald)"></i>' +
+    '<div><p class="mono" style="font-size:1.5rem;font-weight:700;color:var(--emerald)">' + regular + '</p>' +
+    '<p class="mono" style="font-size:0.7rem;text-transform:uppercase;color:var(--muted)">Standard Operators</p></div>' +
+  '</div>';
+
+// Render user rows via JS
+document.getElementById('userList').innerHTML = DEMO.users.map(function(u) {
+  var initial = u.username.charAt(0).toUpperCase();
+  var badgeCls = u.role === 'admin' ? 'badge-red' : 'badge-emerald';
+  return '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05);border-radius:6px;transition:border-color 0.2s" ' +
+    'onmouseenter="this.style.borderColor=\'rgba(0,128,255,0.2)\'" onmouseleave="this.style.borderColor=\'rgba(255,255,255,0.05)\'">' +
+    '<div style="display:flex;align-items:center;gap:12px">' +
+      '<div style="width:36px;height:36px;border-radius:50%;background:rgba(0,128,255,0.08);border:1px solid rgba(0,128,255,0.2);display:flex;align-items:center;justify-content:center;font-family:\'Space Mono\',monospace;font-size:0.9rem;font-weight:700;color:var(--primary);flex-shrink:0">' + initial + '</div>' +
+      '<div>' +
+        '<p class="mono" style="font-size:0.85rem;font-weight:700">' + u.username + '</p>' +
+        '<p style="font-size:0.78rem;color:var(--muted)">' + u.email + '</p>' +
+      '</div>' +
+    '</div>' +
+    '<div style="display:flex;align-items:center;gap:16px">' +
+      '<p class="mono" style="font-size:0.72rem;color:var(--muted)">' + fmtDate(u.createdAt) + '</p>' +
+      '<span class="badge ' + badgeCls + '">' + u.role + '</span>' +
+    '</div>' +
+  '</div>';
+}).join('');
+
+lucide.createIcons();
+</script>
+</body>
+</html>

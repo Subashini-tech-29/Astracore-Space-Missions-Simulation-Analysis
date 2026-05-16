@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ASTRACORE — Login</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+<div id="particles"></div>
+<div class="auth-page">
+  <div class="auth-card card p-6" style="border-color:rgba(0,128,255,0.2);box-shadow:inset 0 0 10px rgba(0,128,255,0.1),0 0 40px rgba(0,128,255,0.1);">
+    <div class="auth-logo">
+      <div class="auth-logo-icon"><i data-lucide="rocket"></i></div>
+      <div class="auth-title neon-text">ASTRACORE</div>
+      <div class="auth-subtitle">Mission Control Authentication Gate</div>
+    </div>
+    <form id="loginForm" class="space-y-4">
+      <div class="form-group">
+        <label class="label">Operator ID</label>
+        <div class="input-icon-wrap">
+          <i data-lucide="user" class="icon"></i>
+          <input id="username" class="input" placeholder="Enter your identifier" autocomplete="off">
+        </div>
+        <div id="usernameErr" class="error-msg" style="display:none">Username is required</div>
+      </div>
+      <div class="form-group">
+        <label class="label">Access Code</label>
+        <div class="input-icon-wrap">
+          <i data-lucide="lock" class="icon"></i>
+          <input id="password" type="password" class="input" placeholder="••••••••">
+        </div>
+        <div id="passwordErr" class="error-msg" style="display:none">Password is required</div>
+      </div>
+      <button type="submit" class="btn btn-primary w-full" style="justify-content:center;margin-top:8px" id="submitBtn">
+        <i data-lucide="log-in"></i>
+        INITIALIZE LOGIN
+      </button>
+    </form>
+    <div class="auth-footer">
+      New operator? <a href="register.html">Request clearance</a>
+    </div>
+    <div class="auth-hint">
+      <i data-lucide="shield-alert" style="width:14px;height:14px"></i>
+      RESTRICTED ACCESS — AUTHORIZED PERSONNEL ONLY
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // Create particles
+  const c = document.getElementById('particles');
+  for(let i=0;i<60;i++){
+    const p=document.createElement('div');p.className='particle';
+    p.style.cssText=`left:${Math.random()*100}%;top:${Math.random()*100}%;animation-duration:${Math.random()*4+3}s;animation-delay:${Math.random()*4}s;`;
+    c.appendChild(p);
+  }
+  // If already logged in, go to dashboard
+  try{ if(localStorage.getItem('astracore_user')) window.location.href='dashboard.html'; }catch(e){}
+
+  lucide.createIcons();
+
+  document.getElementById('loginForm').addEventListener('submit',function(e){
+    e.preventDefault();
+    const u=document.getElementById('username').value.trim();
+    const p=document.getElementById('password').value;
+    let valid=true;
+    document.getElementById('usernameErr').style.display=u?'none':'block'; if(!u)valid=false;
+    document.getElementById('passwordErr').style.display=p?'none':'block'; if(!p)valid=false;
+    if(!valid)return;
+    const btn=document.getElementById('submitBtn');
+    btn.disabled=true; btn.textContent='AUTHORIZING...';
+    setTimeout(()=>{
+      const role = u.toLowerCase().includes('admin')||u.toLowerCase().includes('commander') ? 'admin' : 'user';
+      localStorage.setItem('astracore_user',JSON.stringify({username:u,role}));
+      window.location.href='dashboard.html';
+    },900);
+  });
+})();
+</script>
+</body>
+</html>

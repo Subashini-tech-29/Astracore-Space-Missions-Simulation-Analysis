@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ASTRACORE — Analytics</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="js/shell.js"></script>
+</head>
+<body>
+<div id="particles"></div>
+<div class="app-layout">
+  <div id="shell-container"></div>
+  <div class="main-content">
+    <div class="mobile-header">
+      <span style="font-family:'Space Mono',monospace;font-weight:700;color:var(--primary)">ASTRACORE</span>
+      <button class="btn btn-ghost" onclick="toggleSidebar()"><i data-lucide="menu" style="width:20px;height:20px"></i></button>
+    </div>
+    <div class="page-content">
+      <div class="page-inner space-y-8">
+        <div>
+          <h1 class="page-title">ANALYTICS</h1>
+          <p class="page-subtitle">MISSION DATA INTELLIGENCE CENTER</p>
+        </div>
+
+        <div class="grid grid-4">
+          <div class="card stat-card"><div class="stat-card-top"><div><div class="stat-card-label">Total Missions</div><div class="stat-card-value text-primary">8</div></div><div class="stat-card-icon"><i data-lucide="rocket" style="width:22px;height:22px;color:var(--primary)"></i></div></div></div>
+          <div class="card stat-card"><div class="stat-card-top"><div><div class="stat-card-label">Success Rate</div><div class="stat-card-value" style="color:var(--emerald)">76%</div></div><div class="stat-card-icon"><i data-lucide="trending-up" style="width:22px;height:22px;color:var(--emerald)"></i></div></div></div>
+          <div class="card stat-card"><div class="stat-card-top"><div><div class="stat-card-label">Total Alerts</div><div class="stat-card-value" style="color:var(--yellow)">7</div></div><div class="stat-card-icon"><i data-lucide="bell" style="width:22px;height:22px;color:var(--yellow)"></i></div></div></div>
+          <div class="card stat-card"><div class="stat-card-top"><div><div class="stat-card-label">Critical Alerts</div><div class="stat-card-value text-red">3</div></div><div class="stat-card-icon"><i data-lucide="alert-triangle" style="width:22px;height:22px;color:var(--red)"></i></div></div></div>
+        </div>
+
+        <div class="grid grid-2" style="gap:24px">
+          <div class="card">
+            <div class="card-header"><div class="card-title"><i data-lucide="pie-chart" style="width:15px;height:15px;color:var(--primary)"></i>Missions by Status</div></div>
+            <div class="card-body" style="height:300px;display:flex;align-items:center;justify-content:center"><canvas id="statusChart"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title"><i data-lucide="bar-chart-3" style="width:15px;height:15px;color:var(--primary)"></i>Missions by Destination</div></div>
+            <div class="card-body" style="height:300px"><canvas id="destChart"></canvas></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div class="card-title"><i data-lucide="activity" style="width:15px;height:15px;color:var(--primary)"></i>Alert Severity Timeline (Last 14 Days)</div></div>
+          <div class="card-body" style="height:300px"><canvas id="timelineChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+initShell('shell-container');
+lucide.createIcons();
+
+Chart.defaults.color = '#92a3bc';
+Chart.defaults.font.family = "'Space Mono', monospace";
+Chart.defaults.font.size = 11;
+
+const gridColor = 'rgba(26,38,64,0.8)';
+
+// Status pie
+new Chart(document.getElementById('statusChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['PLANNING','ACTIVE','COMPLETED','FAILED','ABORTED'],
+    datasets: [{ data: [3,2,1,1,1], backgroundColor: ['#0080ff','#34d399','#c084fc','#f53d3d','#fbbf24'], borderWidth: 2, borderColor: '#050a14' }]
+  },
+  options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ color:'#92a3bc', padding:16 } }, tooltip:{ backgroundColor:'#0d1b2e', borderColor:'#1a2640', borderWidth:1 } } }
+});
+
+// Destination bar
+new Chart(document.getElementById('destChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Moon','Mars','Jupiter','Saturn','Venus','Deep Space','Prox.Centauri'],
+    datasets: [{ label:'Missions', data:[2,1,1,1,1,1,1], backgroundColor:'rgba(0,128,255,0.7)', borderRadius:4 }]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:false,
+    scales: {
+      x: { grid:{ color:gridColor }, ticks:{ maxRotation:35 } },
+      y: { grid:{ color:gridColor }, ticks:{ stepSize:1 } }
+    },
+    plugins:{ legend:{ display:false }, tooltip:{ backgroundColor:'#0d1b2e', borderColor:'#1a2640', borderWidth:1 } }
+  }
+});
+
+// Timeline line chart — generate 14 days of fake data
+const labels=[], crit=[], warn=[], safe=[];
+for(let i=13;i>=0;i--){
+  const d=new Date(Date.now()-i*86400000);
+  labels.push(d.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+  crit.push(Math.floor(Math.random()*4));
+  warn.push(Math.floor(Math.random()*6));
+  safe.push(Math.floor(Math.random()*3));
+}
+new Chart(document.getElementById('timelineChart'), {
+  type: 'line',
+  data: {
+    labels,
+    datasets: [
+      { label:'Critical', data:crit, borderColor:'#f53d3d', backgroundColor:'rgba(245,61,61,0.08)', borderWidth:2, pointRadius:0, fill:true, tension:0.3 },
+      { label:'Warning',  data:warn, borderColor:'#fbbf24', backgroundColor:'rgba(251,191,36,0.06)', borderWidth:2, pointRadius:0, fill:true, tension:0.3 },
+      { label:'Safe',     data:safe, borderColor:'#34d399', backgroundColor:'rgba(52,211,153,0.06)', borderWidth:2, pointRadius:0, fill:true, tension:0.3 },
+    ]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:false,
+    scales: { x:{ grid:{ color:gridColor } }, y:{ grid:{ color:gridColor }, ticks:{ stepSize:1 } } },
+    plugins:{ legend:{ labels:{ color:'#92a3bc' } }, tooltip:{ backgroundColor:'#0d1b2e', borderColor:'#1a2640', borderWidth:1 } }
+  }
+});
+</script>
+</body>
+</html>

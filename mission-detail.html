@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ASTRACORE — Mission Detail</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="js/shell.js"></script>
+</head>
+<body>
+<div id="particles"></div>
+<div class="app-layout">
+  <div id="shell-container"></div>
+  <div class="main-content">
+    <div class="mobile-header">
+      <span style="font-family:'Space Mono',monospace;font-weight:700;color:var(--primary)">ASTRACORE</span>
+      <button class="btn btn-ghost" onclick="toggleSidebar()"><i data-lucide="menu" style="width:20px;height:20px"></i></button>
+    </div>
+    <div class="page-content">
+      <div class="page-inner space-y-6" id="content">
+        <div style="display:flex;align-items:center;gap:12px">
+          <a href="missions.html" class="btn btn-outline btn-sm"><i data-lucide="arrow-left" style="width:13px;height:13px"></i>Back</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+initShell('shell-container');
+const params = new URLSearchParams(window.location.search);
+const id = parseInt(params.get('id'));
+const mission = DEMO.missions.find(m=>m.id===id);
+const content = document.getElementById('content');
+if(!mission){
+  content.innerHTML += `<div class="card p-6 text-center"><p class="mono" style="color:var(--muted)">MISSION NOT FOUND</p></div>`;
+} else {
+  const statusColors={planning:'var(--blue)',active:'var(--emerald)',completed:'var(--purple)',failed:'var(--red)',aborted:'var(--yellow)'};
+  content.innerHTML = `
+  <div style="display:flex;align-items:center;gap:12px">
+    <a href="missions.html" class="btn btn-outline btn-sm"><i data-lucide="arrow-left" style="width:13px;height:13px"></i>Back</a>
+  </div>
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div>
+      <h1 class="page-title">${mission.name}</h1>
+      <p class="page-subtitle">${mission.destination.toUpperCase()} — MISSION DOSSIER</p>
+    </div>${statusBadge(mission.status)}
+  </div>
+  <div class="grid grid-2" style="gap:20px">
+    <div class="card p-5 space-y-4">
+      <div class="card-title" style="margin-bottom:12px"><i data-lucide="info" style="width:15px;height:15px;color:var(--primary)"></i>Mission Parameters</div>
+      ${[['Mission ID','#'+String(mission.id).padStart(4,'0')],['Destination',mission.destination],['Payload',mission.payload],['Launch Date',fmtDate(mission.launchDate)],['Status',mission.status.toUpperCase()]].map(([l,v])=>`
+      <div style="display:flex;justify-content:space-between;font-family:'Space Mono',monospace;font-size:0.8rem;padding:8px 0;border-bottom:1px solid var(--border)">
+        <span style="color:var(--muted)">${l}</span><span>${v}</span>
+      </div>`).join('')}
+    </div>
+    <div class="card p-5">
+      <div class="card-title" style="margin-bottom:16px"><i data-lucide="bar-chart-3" style="width:15px;height:15px;color:var(--primary)"></i>Mission Metrics</div>
+      <div class="space-y-5">
+        <div>
+          <div style="display:flex;justify-content:space-between;font-family:'Space Mono',monospace;font-size:0.75rem;margin-bottom:8px">
+            <span style="color:var(--muted)">SUCCESS PROBABILITY</span>
+            <span style="color:var(--emerald)">${parseFloat(mission.successProbability).toFixed(1)}%</span>
+          </div>
+          <div class="progress-wrap"><div class="progress-bar" style="width:${mission.successProbability}%;background:var(--emerald)"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-family:'Space Mono',monospace;font-size:0.75rem;margin-bottom:8px">
+            <span style="color:var(--muted)">RISK ASSESSMENT</span>
+            <span style="color:${parseFloat(mission.successProbability)>80?'var(--emerald)':parseFloat(mission.successProbability)>60?'var(--yellow)':'var(--red)'}">${parseFloat(mission.successProbability)>80?'LOW':parseFloat(mission.successProbability)>60?'MEDIUM':'HIGH'}</span>
+          </div>
+          <div class="progress-wrap"><div class="progress-bar" style="width:${100-parseFloat(mission.successProbability)}%;background:${parseFloat(mission.successProbability)>80?'var(--emerald)':parseFloat(mission.successProbability)>60?'var(--yellow)':'var(--red)'}"></div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
+          <div style="padding:12px;background:rgba(255,255,255,0.03);border-radius:6px;border:1px solid var(--border)">
+            <div style="font-family:'Space Mono',monospace;font-size:0.65rem;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Duration Est.</div>
+            <div style="font-family:'Space Mono',monospace;font-size:0.9rem;font-weight:700;color:var(--primary)">${Math.round(Math.random()*180+30)}d</div>
+          </div>
+          <div style="padding:12px;background:rgba(255,255,255,0.03);border-radius:6px;border:1px solid var(--border)">
+            <div style="font-family:'Space Mono',monospace;font-size:0.65rem;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Crew Size</div>
+            <div style="font-family:'Space Mono',monospace;font-size:0.9rem;font-weight:700;color:var(--blue)">${Math.round(Math.random()*6+1)}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card p-5">
+    <div class="card-title" style="margin-bottom:14px"><i data-lucide="clipboard-list" style="width:15px;height:15px;color:var(--primary)"></i>Mission Log</div>
+    <div class="space-y-3">
+      ${['Mission parameters locked in database','Pre-launch systems check scheduled','Payload integration confirmed','Trajectory calculated and verified','Launch window confirmed'].map((log,i)=>`
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--primary);flex-shrink:0;margin-top:5px;box-shadow:0 0 6px var(--primary)"></div>
+        <div>
+          <p style="font-size:0.85rem">${log}</p>
+          <p style="font-family:'Space Mono',monospace;font-size:0.68rem;color:var(--muted);margin-top:2px">${fmtDate(new Date(Date.now()-(i*86400000*3)))}</p>
+        </div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+lucide.createIcons();
+</script>
+</body>
+</html>
